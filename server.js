@@ -3,12 +3,10 @@ const cors = require('cors');
 const { createServer } = require('http');
 const { Server } = require('socket.io');
 const { Client, LocalAuth } = require('whatsapp-web.js');
-const fs = require('fs');
 
 const app = express();
 const httpServer = createServer(app);
 
-// CORS for frontend domain
 app.use(cors({
   origin: ['https://mauka365.com'],
   methods: ['GET', 'POST'],
@@ -24,14 +22,12 @@ const io = new Server(httpServer, {
   }
 });
 
-// WhatsApp client
 const client = new Client({
-  authStrategy: new LocalAuth({ dataPath: './sessions' })
+  authStrategy: new LocalAuth({ clientId: "mauka-clean" })
 });
 
-// Socket.io QR and readiness handlers
 io.on('connection', (socket) => {
-  console.log('Client connected');
+  console.log('Socket connected');
 
   client.on('qr', (qr) => {
     console.log("QR Generated");
@@ -39,14 +35,13 @@ io.on('connection', (socket) => {
   });
 
   client.on('ready', () => {
-    console.log("WhatsApp is ready!");
+    console.log("WhatsApp is ready");
     socket.emit('ready');
   });
 });
 
 client.initialize();
 
-// REST endpoint to send message
 app.post('/send-message', async (req, res) => {
   const { number, message } = req.body;
 
@@ -56,13 +51,14 @@ app.post('/send-message', async (req, res) => {
 
   try {
     const chatId = number.includes('@c.us') ? number : number + '@c.us';
-    const sentMessage = await client.sendMessage(chatId, message);
-    res.json({ status: 'success', messageId: sentMessage.id.id });
+    const sent = await client.sendMessage(chatId, message);
+    res.json({ status: 'success', id: sent.id.id });
   } catch (error) {
-    console.error("Error sending message:", error.message);
+    console.error("SEND ERROR:", error.message);
+    console.error(error.stack);
     res.status(500).json({ status: 'error', message: error.message });
   }
 });
 
 const PORT = process.env.PORT || 8000;
-httpServer.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+httpServer.listen(PORT, () => console.log(`Running on port ${PORT}`));
